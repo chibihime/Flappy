@@ -1,26 +1,32 @@
-# Importing modules
-import random  # returns a random val in the given range
-import sys  # allows oper on the interpreter directly
-import pygame  # cross platform set of python modules for game dev
-from pygame.locals import *  # importing all from pygame local lib
-from pygame import mixer  # for songs
+import os
+import random
+import sys
+import pygame
+from pygame.locals import *
+from pygame import mixer
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
 
+# Function to get user-selected file
+def get_file(title="Select file", filetypes=[("All files", "*.*")]):
+    root = Tk()
+    root.withdraw()  # Hide the root window
+    filename = askopenfilename(title=title, filetypes=filetypes)
+    return filename
 
-# create an instance of mixer
+# Initialize mixer
 mixer.init()
 
 # Load audio file
-mixer.music.load(
-    "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\Donkey Kong Country Music SNES - Jungle Groove.mp3"
-)
+audio_file = get_file(title="Select Audio File", filetypes=[("MP3 files", "*.mp3")])
+if audio_file:
+    mixer.music.load(audio_file)
+    mixer.music.set_volume(0.2)
+    mixer.music.play()
+else:
+    print("No audio file selected, game will proceed without background music.")
 
 print("Welcome to a seamless playing experience ....")
-
-# Set preferred volume
-mixer.music.set_volume(0.2)
-
-# Play the music
-mixer.music.play()
 
 # All the Game Variables
 window_width = 600
@@ -31,13 +37,14 @@ window = pygame.display.set_mode((window_width, window_height))
 elevation = window_height * 0.8
 game_images = {}
 framepersecond = 32
-pipeimage = "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\pipe.png"
-background_image = "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\background.jpg"
-birdplayer_image = "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\bird.png"
-sealevel_image = "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\base.jfif"
 
+# File selection for images
+pipeimage = get_file(title="Select Pipe Image", filetypes=[("Image files", "*.png *.jpg *.jpeg")])
+background_image = get_file(title="Select Background Image", filetypes=[("Image files", "*.png *.jpg *.jpeg")])
+birdplayer_image = get_file(title="Select Bird Image", filetypes=[("Image files", "*.png *.jpg *.jpeg")])
+sealevel_image = get_file(title="Select Sea Level Image", filetypes=[("Image files", "*.png *.jpg *.jpeg")])
 
-# main function
+# Main function
 def flappygame():
     your_score = 0
     horizontal = int(window_width / 5)
@@ -46,12 +53,9 @@ def flappygame():
     mytempheight = 100
 
     # Generating two pipes for blitting on window
-    # blitting is basically when a block of data is rapidly moved / copied in memory
     first_pipe = createPipe()
     second_pipe = createPipe()
 
-    # List containing lower pipes
-    # setting x and y coordinates
     down_pipes = [
         {"x": window_width + 300 - mytempheight, "y": first_pipe[1]["y"]},
         {
@@ -60,9 +64,6 @@ def flappygame():
         },
     ]
 
-    # List Containing upper pipes
-    # setting x and y coordinates
-    # took any arbitary value
     up_pipes = [
         {"x": window_width + 300 - mytempheight, "y": first_pipe[0]["y"]},
         {
@@ -71,16 +72,13 @@ def flappygame():
         },
     ]
 
-    # pipe velocity along x
-    pipeVelX = -4 #relative 
+    pipeVelX = -4
 
-    # bird velocity
     bird_velocity_y = -9
     bird_Max_Vel_Y = 10
     bird_Min_Vel_Y = -8
     birdAccY = 1
 
-    # code logic
     bird_flap_velocity = -8
     bird_flapped = False
     while True:
@@ -90,60 +88,41 @@ def flappygame():
                 sys.exit()
             if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
                 if vertical > 0:
-                    bird_velocity_y = (
-                        bird_flap_velocity  # this causes the bird to move upward
-                    )
-                    bird_flapped = True  # set
+                    bird_velocity_y = bird_flap_velocity
+                    bird_flapped = True
 
-        # This function will return true
-        # if the flappybird crashes
         game_over = isGameOver(horizontal, vertical, up_pipes, down_pipes)
         if game_over:
             return
 
-        # check for your_score
-        # calculating the pos based on the pipe images
         playerMidPos = horizontal + game_images["flappybird"].get_width() / 2
         for pipe in up_pipes:
             pipeMidPos = pipe["x"] + game_images["pipeimage"][0].get_width() / 2
-            if (
-                pipeMidPos <= playerMidPos < pipeMidPos + 4
-            ):  # basically if flappy bird is at pos where its at the right edge of pipe count++
+            if pipeMidPos <= playerMidPos < pipeMidPos + 4:
                 your_score += 1
-                print(
-                    f"Your your_score is {your_score}"
-                )  # does this each time we pass a pipe
+                print(f"Your score is {your_score}")
 
         if bird_velocity_y < bird_Max_Vel_Y and not bird_flapped:
-            bird_velocity_y += birdAccY  # this will increase the speed
+            bird_velocity_y += birdAccY
 
-        # this function is for deciding when you lose
         if bird_flapped:
             bird_flapped = False
         playerHeight = game_images["flappybird"].get_height()
         vertical = vertical + min(bird_velocity_y, elevation - vertical - playerHeight)
 
-        # move pipes to the left
-        # zip() returns matched up iterator from both lists acc to their indexes
-        # zip() will ensure the pipes move out together
         for upperPipe, lowerPipe in zip(up_pipes, down_pipes):
             upperPipe["x"] += pipeVelX
             lowerPipe["x"] += pipeVelX
 
-        # Add a new pipe when the first is
-        # about to cross the leftmost part of the screen
         if 0 < up_pipes[0]["x"] < 5:
             newpipe = createPipe()
             up_pipes.append(newpipe[0])
             down_pipes.append(newpipe[1])
 
-        # if the pipe is out of the screen, remove it
         if up_pipes[0]["x"] < -game_images["pipeimage"][0].get_width():
             up_pipes.pop(0)
             down_pipes.pop(0)
 
-        #  blit game images
-        # for a constant endless experience
         window.blit(game_images["background"], (0, 0))
         for upperPipe, lowerPipe in zip(up_pipes, down_pipes):
             window.blit(game_images["pipeimage"][0], (upperPipe["x"], upperPipe["y"]))
@@ -152,109 +131,64 @@ def flappygame():
         window.blit(game_images["sea_level"], (ground, elevation))
         window.blit(game_images["flappybird"], (horizontal, vertical))
 
-        # Fetching the digits of score.
         numbers = [int(x) for x in list(str(your_score))]
         width = 0
 
-        # finding the width of score images from numbers.
         for num in numbers:
             width += game_images["scoreimages"][num].get_width()
         Xoffset = (window_width - width) / 1.1
 
-        # Blitting the images on the window.
         for num in numbers:
             window.blit(game_images["scoreimages"][num], (Xoffset, window_width * 0.02))
             Xoffset += game_images["scoreimages"][num].get_width()
 
-        # Refreshing the game window and displaying the score.
         pygame.display.update()
         framepersecond_clock.tick(framepersecond)
 
-
-# game over function
 def isGameOver(horizontal, vertical, up_pipes, down_pipes):
     if vertical > elevation - 25 or vertical < 0:
         return True
 
     for pipe in up_pipes:
         pipeHeight = game_images["pipeimage"][0].get_height()
-        if (
-            vertical < pipeHeight + pipe["y"]
-            and abs(horizontal - pipe["x"]) < game_images["pipeimage"][0].get_width()
-        ):
+        if vertical < pipeHeight + pipe["y"] and abs(horizontal - pipe["x"]) < game_images["pipeimage"][0].get_width():
             return True
 
     for pipe in down_pipes:
-        if (vertical + game_images["flappybird"].get_height() > pipe["y"]) and abs(
-            horizontal - pipe["x"]
-        ) < game_images["pipeimage"][0].get_width():
+        if (vertical + game_images["flappybird"].get_height() > pipe["y"]) and abs(horizontal - pipe["x"]) < game_images["pipeimage"][0].get_width():
             return True
     return False
 
-
-# create
 def createPipe():
     offset = window_height / 3
     pipeHeight = game_images["pipeimage"][0].get_height()
-    y2 = offset + random.randrange(
-        0, int(window_height - game_images["sea_level"].get_height() - 1.2 * offset)
-    )  # this is for creating a randown no of images
+    y2 = offset + random.randrange(0, int(window_height - game_images["sea_level"].get_height() - 1.2 * offset))
     pipeX = window_width + 10
     y1 = pipeHeight - y2 + offset
     pipe = [
-        # upper Pipe
         {"x": pipeX, "y": -y1},
-        # lower Pipe
         {"x": pipeX, "y": y2},
     ]
     return pipe
 
-
-# program where the game starts
 if __name__ == "__main__":
-    # For initializing modules of pygame library
     pygame.init()
     framepersecond_clock = pygame.time.Clock()
+    pygame.display.set_caption("Make you own Flappy Bird")
 
-    # Sets the title on top of game window
-    pygame.display.set_caption("Flappy Bird_DVP Mini Project")
-
-    # Load all the images
-
-    # images for displaying score
     game_images["scoreimages"] = (
-        pygame.image.load(
-            "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\0.png"
-        ).convert_alpha(),
-        pygame.image.load(
-            "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\1.png"
-        ).convert_alpha(),
-        pygame.image.load(
-            "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\2.png"
-        ).convert_alpha(),
-        pygame.image.load(
-            "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\imgs\\3.png"
-        ).convert_alpha(),
-        pygame.image.load(
-            "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\4.png"
-        ).convert_alpha(),
-        pygame.image.load(
-            "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\5.png"
-        ).convert_alpha(),
-        pygame.image.load(
-            "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\6.png"
-        ).convert_alpha(),
-        pygame.image.load(
-            "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\imgs\\7.png"
-        ).convert_alpha(),
-        pygame.image.load(
-            "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\8.png"
-        ).convert_alpha(),
-        pygame.image.load(
-            "C:\\Users\\PRUTHA\\Desktop\\DVP_mini_project\\imgs\\9.png"
-        ).convert_alpha(),
+        pygame.image.load(get_file(title="Select Score Image for 0")).convert_alpha(),
+        pygame.image.load(get_file(title="Select Score Image for 1")).convert_alpha(),
+        pygame.image.load(get_file(title="Select Score Image for 2")).convert_alpha(),
+        pygame.image.load(get_file(title="Select Score Image for 3")).convert_alpha(),
+        pygame.image.load(get_file(title="Select Score Image for 4")).convert_alpha(),
+        pygame.image.load(get_file(title="Select Score Image for 5")).convert_alpha(),
+        pygame.image.load(get_file(title="Select Score Image for 6")).convert_alpha(),
+        pygame.image.load(get_file(title="Select Score Image for 7")).convert_alpha(),
+        pygame.image.load(get_file(title="Select Score Image for 8")).convert_alpha(),
+        pygame.image.load(get_file(title="Select Score Image for 9")).convert_alpha(),
     )
-    # convert_alpha() for converting to same pixels as display
+    
     game_images["flappybird"] = pygame.image.load(birdplayer_image).convert_alpha()
     game_images["sea_level"] = pygame.image.load(sealevel_image).convert_alpha()
     game_images["background"] = pygame.image.load(background_image).convert_alpha()
@@ -266,34 +200,20 @@ if __name__ == "__main__":
     print("WELCOME TO OUR FLAPPY BIRD GAME")
     print("Press space or enter to start the game")
 
-    # Here starts the main game
-
     while True:
-        # sets the coordinates of flappy bird
-
         horizontal = int(window_width / 5)
         vertical = int((window_height - game_images["flappybird"].get_height()) / 2)
         ground = 0
         while True:
             for event in pygame.event.get():
-                # if user clicks on cross button, close the game
-                if event.type == QUIT or (
-                    event.type == KEYDOWN and event.key == K_ESCAPE
-                ):
+                if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                     pygame.quit()
                     sys.exit()
-
-                # If the user presses space or
-                # up key, start the game for them
-                elif event.type == KEYDOWN and (
-                    event.key == K_SPACE or event.key == K_UP
-                ):
+                elif event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
                     flappygame()
 
-                # if user doesn't press anykey Nothing happen
-                else:
-                    window.blit(game_images["background"], (0, 0))
-                    window.blit(game_images["flappybird"], (horizontal, vertical))
-                    window.blit(game_images["sea_level"], (ground, elevation))
-                    pygame.display.update()
-                    framepersecond_clock.tick(framepersecond)
+            window.blit(game_images["background"], (0, 0))
+            window.blit(game_images["flappybird"], (horizontal, vertical))
+            window.blit(game_images["sea_level"], (ground, elevation))
+            pygame.display.update()
+            framepersecond_clock.tick(framepersecond)
